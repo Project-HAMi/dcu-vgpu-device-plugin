@@ -23,6 +23,45 @@ $ kubectl apply -f k8s-dcu-plugin.yaml
 docker build .
 ```
 
+## Examples
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alexnet-tf-gpu-pod-mem
+  labels:
+    purpose: demo-tf-amdgpu
+spec:
+  containers:
+    - name: alexnet-tf-gpu-container
+      image: ubuntu:20.04
+      workingDir: /root
+      command: ["sleep","infinity"]
+      resources:
+        limits:
+          hygon.com/dcunum: 1 # requesting a GPU
+          hygon.com/dcumem: 2000 # each dcu require 2000 MiB device memory
+          hygon.com/dcucores: 15 # each dcu use 60% of total compute cores
+```
+
+## Validatio
+
+Inside container, use hy-virtual to validate
+
+```
+source /opt/hygondriver/env.sh
+hy-virtual -show-device-info
+```
+
+There will be output like these:
+```
+Device 0:
+	Actual Device: 0
+	Compute units: 9
+	Global memory: 2097152000 bytes
+```
+
 ## Maintainer
 
-limengxuan@4paradigm.com
+limengxuan
