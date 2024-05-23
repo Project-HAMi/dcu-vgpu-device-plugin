@@ -65,6 +65,9 @@ func init() {
 	InRequestDevices = make(map[string]string)
 	SupportDevices = make(map[string]string)
 	HandshakeAnnos = make(map[string]string)
+	InRequestDevices[HygonDCUDevice] = "hami.io/dcu-devices-to-allocate"
+	SupportDevices[HygonDCUDevice] = "hami.io/dcu-devices-allocated"
+	HandshakeAnnos[HygonDCUDevice] = HandshakeAnnosString
 }
 
 func GetNode(nodename string) (*corev1.Node, error) {
