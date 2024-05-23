@@ -21,7 +21,7 @@ spec:
       - key: CriticalAddonsOnly
         operator: Exists
       containers:
-      - image: dcu-zifang-plugin:v1.0.1
+      - image: projecthami/dcu-vgpu-device-plugin:v1.0.1
         #command: ["/bin/bash","-c","source /opt/hygondriver/env.sh && sleep infinity"]
         command: ["/bin/bash","-c","cd /opt/hygondriver && sleep infinity"]
         name: dcu-dp-cntr
