@@ -11,6 +11,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+FROM golang:1.21-bullseye AS GOBUILD
+ADD . /device-plugin
+ARG GOPROXY=https://goproxy.cn,direct
+RUN apt-get update && apt-get -y install libhwloc-dev libdrm-dev
+RUN cd /device-plugin && go build -o ./k8s-device-plugin cmd/k8s-device-plugin/main.go
+
 FROM ubuntu:20.04
 ENV TZ=Asia/Dubai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -23,5 +29,5 @@ ENV DTKROOT=/opt/hygondriver
 ENV CPLUS_INCLUDE_PATH=/opt/hygondriver/include:/opt/hyhal/include:/opt/hygondriver/llvm/include:/opt/hygondriver/.hyhal/include:
 ENV HYHAL_PATH=/opt/hyhal
 WORKDIR /root/
-COPY cmd/k8s-device-plugin/k8s-device-plugin .
+COPY --from=GOBUILD /device-plugin/k8s-device-plugin .
 CMD ["./k8s-device-plugin", "-logtostderr=true", "-stderrthreshold=INFO", "-v=5"]
