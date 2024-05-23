@@ -1,15 +1,16 @@
-module github.com/RadeonOpenCompute/k8s-device-plugin
+module github.com/HAMi/dcu-vgpu-device-plugin
 
 go 1.15
 
 require (
-	github.com/go-logr/logr v0.3.0
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/go-logr/logr v1.2.4
+	github.com/golang/glog v1.0.0
 	github.com/kubevirt/device-plugin-manager v1.18.8
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
-	google.golang.org/grpc v1.35.0 // indirect
-	k8s.io/api v0.20.2
-	k8s.io/apimachinery v0.20.2
-	k8s.io/kubelet v0.18.8
+	gotest.tools/v3 v3.0.2
+	k8s.io/api v0.28.3
+	k8s.io/apimachinery v0.28.3
+	k8s.io/client-go v0.28.3
+	k8s.io/klog/v2 v2.100.1
+	k8s.io/kubelet v0.28.3
 	sigs.k8s.io/controller-runtime v0.8.1
 )
