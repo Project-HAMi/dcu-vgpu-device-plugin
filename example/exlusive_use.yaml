@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alexnet-tf-gpu-pod-mem
+  labels:
+    purpose: demo-tf-amdgpu
+spec:
+  containers:
+    - name: alexnet-tf-gpu-container
+      image: ubuntu:20.04
+      workingDir: /root
+      command: ["sleep","infinity"]
+      resources:
+        limits:
+          hygon.com/dcunum: 1 # requesting a GPU
