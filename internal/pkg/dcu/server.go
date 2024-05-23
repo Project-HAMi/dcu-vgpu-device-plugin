@@ -453,7 +453,7 @@ func (p *Plugin) createvdevFile(current *corev1.Pod, ctr *corev1.Container, req 
 		reqcores := (val.Usedcores * int32(p.totalcores[idx])) / 100
 		coremsk, _ = allocCoreUsage(p.coremask[idx], int(reqcores))
 		s = s + fmt.Sprintf("cu_mask: 0x%s\n", coremsk)
-		s = s + fmt.Sprintf("cu_count: %d\n", p.totalcores[idx])
+		s = s + fmt.Sprintf("cu_count: %d\n", reqcores)
 		s = s + fmt.Sprintf("mem: %d MiB\n", val.Usedmem)
 		s = s + fmt.Sprintf("device_id: %d\n", 0)
 		devidx = idx
