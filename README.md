@@ -45,7 +45,7 @@ spec:
           hygon.com/dcucores: 15 # each dcu use 60% of total compute cores
 ```
 
-## Validatio
+## Validation
 
 Inside container, use hy-virtual to validate
 
