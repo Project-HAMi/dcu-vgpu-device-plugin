@@ -564,6 +564,10 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 				ContainerPath: "/opt/hygondriver",
 				HostPath:      os.Getenv("HYGONPATH"),
 				ReadOnly:      false,
+			}, &kubeletdevicepluginv1beta1.Mount{
+				ContainerPath: "/opt/hyhal",
+				HostPath:      "/opt/hyhal",
+				ReadOnly:      false,
 			})
 			car.Mounts = append(car.Mounts)
 		}

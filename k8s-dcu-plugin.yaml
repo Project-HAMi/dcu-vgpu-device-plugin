@@ -23,7 +23,7 @@ spec:
       containers:
       - image: projecthami/dcu-vgpu-device-plugin:v1.0.1
         #command: ["/bin/bash","-c","source /opt/hygondriver/env.sh && sleep infinity"]
-        command: ["/bin/bash","-c","cd /opt/hygondriver && sleep infinity"]
+        command: ["/root/k8s-device-plugin"]
         name: dcu-dp-cntr
         env:
           - name: NODE_NAME
