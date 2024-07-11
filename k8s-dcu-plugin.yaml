@@ -51,6 +51,8 @@ spec:
             mountPath: /opt/hygondriver/
           - name: lib
             mountPath: /usr/local/vgpu
+          - name: hyhal
+            mountPath: /opt/hyhal
       volumes:
         - name: dp
           hostPath:
@@ -67,4 +69,7 @@ spec:
         - name: lib
           hostPath:
             path: /usr/local/vgpu
+        - name: hyhal
+          hostPath:
+            path: /opt/hyhal
 
