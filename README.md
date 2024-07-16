@@ -3,6 +3,9 @@
 ## Introduction
 This is a [Kubernetes][k8s] [device plugin][dp] implementation that enables the registration of hygon DCU in a container cluster for compute workload.  With the approrpriate hardware and this plugin deployed in your Kubernetes cluster, you will be able to run jobs that require AMD DCU. It supports DCU-virtualzation by using hy-virtual provided by dtk
 
+## Architect
+The flow of vDCU job is as follows:
+<img src="./DCU_job_flow.png" width="200px">
 
 ## Prerequisites
 * dtk >= 24.04
