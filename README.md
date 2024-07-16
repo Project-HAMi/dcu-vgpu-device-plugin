@@ -5,7 +5,8 @@ This is a [Kubernetes][k8s] [device plugin][dp] implementation that enables the 
 
 ## Architect
 The flow of vDCU job is as follows:
-<img src="./DCU_job_flow.png" width="200px">
+
+<img src="./DCU_job_flow.png" width="600px">
 
 ## Prerequisites
 * dtk >= 24.04
