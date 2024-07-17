@@ -435,12 +435,6 @@ func (p *Plugin) createvdevFile(current *corev1.Pod, ctr *corev1.Container, req 
 	var devidx, pipeid, vdevidx int
 	coremsk := ""
 	if len(req) > 1 {
-		for _, val := range req {
-			if val.Usedcores > 0 || val.Usedmem > 0 {
-				klog.Errorf("vdev only support one device per container")
-				return "", errors.New("vdev only support one device per container")
-			}
-		}
 		return "", nil
 	}
 	for _, val := range req {
