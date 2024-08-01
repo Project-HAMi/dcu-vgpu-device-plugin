@@ -543,27 +543,28 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 			car.Devices = append(car.Devices, dev)
 		}
 		//Create vdev file
-
-		filename, err := p.createvdevFile(current, &currentCtr, devreq)
-		if err != nil {
-			util.PodAllocationFailed(nodename, current, NodeLockDCU)
-			return &responses, err
-		}
-		if len(filename) > 0 {
-			car.Mounts = append(car.Mounts, &kubeletdevicepluginv1beta1.Mount{
-				ContainerPath: "/etc/vdev/docker/",
-				HostPath:      filename,
-				ReadOnly:      false,
-			}, &kubeletdevicepluginv1beta1.Mount{
-				ContainerPath: "/opt/hygondriver",
-				HostPath:      os.Getenv("HYGONPATH"),
-				ReadOnly:      false,
-			}, &kubeletdevicepluginv1beta1.Mount{
-				ContainerPath: "/opt/hyhal",
-				HostPath:      "/opt/hyhal",
-				ReadOnly:      false,
-			})
-			car.Mounts = append(car.Mounts)
+		if len(devreq) < 2 && devreq[0].Usedmem < int32(p.totalmem[0]) {
+			filename, err := p.createvdevFile(current, &currentCtr, devreq)
+			if err != nil {
+				util.PodAllocationFailed(nodename, current, NodeLockDCU)
+				return &responses, err
+			}
+			if len(filename) > 0 {
+				car.Mounts = append(car.Mounts, &kubeletdevicepluginv1beta1.Mount{
+					ContainerPath: "/etc/vdev/docker/",
+					HostPath:      filename,
+					ReadOnly:      false,
+				}, &kubeletdevicepluginv1beta1.Mount{
+					ContainerPath: "/opt/hygondriver",
+					HostPath:      os.Getenv("HYGONPATH"),
+					ReadOnly:      false,
+				}, &kubeletdevicepluginv1beta1.Mount{
+					ContainerPath: "/opt/hyhal",
+					HostPath:      "/opt/hyhal",
+					ReadOnly:      false,
+				})
+				car.Mounts = append(car.Mounts)
+			}
 		}
 		responses.ContainerResponses = append(responses.ContainerResponses, &car)
 	}
