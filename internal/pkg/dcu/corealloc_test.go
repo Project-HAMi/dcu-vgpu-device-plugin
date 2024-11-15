@@ -43,10 +43,10 @@ func TestAddCoreUsage(t *testing.T) {
 
 func TestAllocCoreUsage(t *testing.T) {
 	str1 := "50200fff4000000"
-	res, _ := allocCoreUsage(str1, 16)
+	res, _, _ := allocCoreUsage(str1, 16)
 	t.Log("res=", res)
 	assert.Equal(t, strings.Compare(res, "afdfe0000000000"), 0)
 	str1 = "abcde000ad00012"
-	res, _ = allocCoreUsage(str1, 32)
+	res, _, _ = allocCoreUsage(str1, 32)
 	t.Log("res=", res)
 }
