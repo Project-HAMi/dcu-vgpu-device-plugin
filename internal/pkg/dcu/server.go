@@ -55,7 +55,7 @@ type Plugin struct {
 	Heartbeat  chan bool
 	vidx       []bool
 	pipeid     [][]bool
-	coremask   []string
+	coremask   [][]string
 	cardtype   []string
 	count      int
 }
@@ -87,9 +87,11 @@ func (p *Plugin) Start() error {
 	for idx := range p.cardtype {
 		p.cardtype[idx] = ""
 	}
-	p.coremask = make([]string, 16)
+	p.coremask = make([][]string, 16)
 	for idx := range p.coremask {
-		p.coremask[idx] = ""
+		p.coremask[idx] = make([]string, 2)
+		p.coremask[idx][0] = ""
+		p.coremask[idx][1] = ""
 	}
 	p.count = 0
 
@@ -136,7 +138,10 @@ func (p *Plugin) Start() error {
 		if index%2 == 0 {
 			_, err := fmt.Sscanf(val, "DCU[%d] 		: Card Series:		%s\n", &idx, &cardtype)
 			if err != nil {
-				panic(err)
+				_, err := fmt.Sscanf(val, "DCU[%d] 		: Card Series:		DCU %s\n", &idx, &cardtype)
+				if err != nil {
+					panic(err)
+				}
 			}
 			p.cardtype[idx] = fmt.Sprintf("%v-%v", "DCU", cardtype)
 		}
@@ -186,7 +191,8 @@ func (p *Plugin) Start() error {
 	}
 	fmt.Println("collecting pcibus=", p.pcibusid, "cores=", p.totalcores)
 	for idx, val := range p.totalcores {
-		p.coremask[idx] = initCoreUsage(val)
+		p.coremask[idx][0] = initCoreUsage(val)
+		p.coremask[idx][1] = initCoreUsage(val)
 	}
 	go p.WatchAndRegister()
 	return nil
@@ -295,7 +301,8 @@ func (p *Plugin) RefreshContainerDevices() error {
 		return err
 	}
 	for idx := range p.coremask {
-		p.coremask[idx] = initCoreUsage(p.totalcores[idx])
+		p.coremask[idx][0] = initCoreUsage(p.totalcores[idx])
+		p.coremask[idx][1] = initCoreUsage(p.totalcores[idx])
 	}
 
 	for _, f := range files {
@@ -312,7 +319,8 @@ func (p *Plugin) RefreshContainerDevices() error {
 				didx, _ = strconv.Atoi(tmpstr[2])
 				pid, _ = strconv.Atoi(tmpstr[3])
 				vdidx, _ = strconv.Atoi(tmpstr[4])
-				p.coremask[didx], _ = addCoreUsage(p.coremask[didx], tmpstr[5])
+				p.coremask[didx][0], _ = addCoreUsage(p.coremask[didx][0], tmpstr[5])
+				p.coremask[didx][1], _ = addCoreUsage(p.coremask[didx][1], tmpstr[6])
 				p.vidx[vdidx] = true
 				p.pipeid[didx][pid] = true
 			}
@@ -326,6 +334,7 @@ func (p *Plugin) RefreshContainerDevices() error {
 			p.vidx[vdidx] = false
 			p.pipeid[didx][pid] = false
 			os.RemoveAll("/usr/local/vgpu/dcu/" + f.Name())
+			os.Remove(fmt.Sprintf("/etc/vdev/vdev%d.conf", vdidx))
 		}
 		fmt.Println(f.Name())
 	}
@@ -430,10 +439,14 @@ func getIndexFromUUID(uid string) int {
 }
 
 // Create virtual vdev directory and file
-func (p *Plugin) createvdevFile(current *corev1.Pod, ctr *corev1.Container, req util.ContainerDevices) (string, error) {
-	s := ""
+func (p *Plugin) createvdevFiles(current *corev1.Pod, ctr *corev1.Container, req util.ContainerDevices) (string, error) {
 	var devidx, pipeid, vdevidx int
-	coremsk := ""
+	var pcibusId string
+	var reqcores, mem int32
+	var err error
+	coremsk1 := initCoreUsage(16)
+	coremsk2 := initCoreUsage(16)
+	reqtmp := 0
 	if len(req) > 1 {
 		return "", nil
 	}
@@ -442,42 +455,80 @@ func (p *Plugin) createvdevFile(current *corev1.Pod, ctr *corev1.Container, req 
 			continue
 		}
 		idx := getIndexFromUUID(val.UUID)
-		pcibusId := p.pcibusid[idx]
-		s = fmt.Sprintf("PciBusId: %s\n", pcibusId)
-		reqcores := (val.Usedcores * int32(p.totalcores[idx])) / 100
-		coremsk, _ = allocCoreUsage(p.coremask[idx], int(reqcores))
-		s = s + fmt.Sprintf("cu_mask: 0x%s\n", coremsk)
-		s = s + fmt.Sprintf("cu_count: %d\n", reqcores)
-		s = s + fmt.Sprintf("mem: %d MiB\n", val.Usedmem)
-		s = s + fmt.Sprintf("device_id: %d\n", 0)
+		pcibusId = p.pcibusid[idx]
+		reqcores = (val.Usedcores * int32(p.totalcores[idx])) / 100
+		coremsk1, reqtmp, _ = allocCoreUsage(p.coremask[idx][0], int(reqcores))
+		if reqtmp > 0 {
+			coremsk2, _, _ = allocCoreUsage(p.coremask[idx][1], reqtmp)
+		}
+		mem = val.Usedmem
 		devidx = idx
-		vdevidx, err := p.AllocateVidx()
+		vdevidx, err = p.AllocateVidx()
 		if err != nil {
 			return "", err
 		}
-		s = s + fmt.Sprintf("vdev_id: %d\n", vdevidx)
 		pipeid, err = p.AllocatePipeID(idx)
 		if err != nil {
 			return "", err
 		}
-		s = s + fmt.Sprintf("pipe_id: %d\n", pipeid)
-		s = s + fmt.Sprintln("enable: 1")
 	}
-	cacheFileHostDirectory := "/usr/local/vgpu/dcu/" + string(current.UID) + "_" + ctr.Name + "_" + fmt.Sprint(devidx) + "_" + fmt.Sprint(pipeid) + "_" + fmt.Sprint(vdevidx) + "_" + coremsk
-	err := os.MkdirAll(cacheFileHostDirectory, 0777)
+	dirName := string(current.UID) + "_" + ctr.Name + "_" + fmt.Sprint(devidx) + "_" + fmt.Sprint(pipeid) + "_" + fmt.Sprint(vdevidx) + "_" + fmt.Sprint(coremsk1) + "_" + fmt.Sprint(coremsk2)
+	cacheFileHostDirectory := fmt.Sprintf("/usr/local/vgpu/dcu/%s", dirName)
+	err = createvdevFile(pcibusId, coremsk1, coremsk2, reqcores, mem, 0, vdevidx, pipeid, cacheFileHostDirectory, "vdev0.conf")
 	if err != nil {
 		return "", err
 	}
-	err = os.Chmod(cacheFileHostDirectory, 0777)
+	// support dcu-exporter
+	err = createvdevFile(pcibusId, coremsk1, coremsk2, reqcores, mem, devidx, vdevidx, pipeid, "/etc/vdev/", fmt.Sprintf("vdev%d.conf", vdevidx))
 	if err != nil {
 		return "", err
 	}
-	klog.Infoln("s=", s)
-	err = os.WriteFile(cacheFileHostDirectory+"/vdev0.conf", []byte(s), os.ModePerm)
+
+	coreUsage1, err := addCoreUsage(p.coremask[devidx][0], coremsk1)
 	if err != nil {
 		return "", err
 	}
+	p.coremask[devidx][0] = coreUsage1
+
+	coreUsage2, err := addCoreUsage(p.coremask[devidx][1], coremsk2)
+	if err != nil {
+		return "", err
+	}
+	p.coremask[devidx][1] = coreUsage2
+
 	return cacheFileHostDirectory, nil
+}
+
+func createvdevFile(pcibusId, coremsk1, coremsk2 string, reqcores, mem int32, deviceid, vdevidx, pipeid int, cacheFileHostDirectory, cacheFileName string) error {
+	s := ""
+	s = fmt.Sprintf("PciBusId: %s\n", pcibusId)
+	s = s + fmt.Sprintf("cu_mask: 0x%s\n", coremsk1)
+	s = s + fmt.Sprintf("cu_mask: 0x%s\n", coremsk2)
+	s = s + fmt.Sprintf("cu_count: %d\n", reqcores)
+	s = s + fmt.Sprintf("mem: %d MiB\n", mem)
+	s = s + fmt.Sprintf("device_id: %d\n", deviceid)
+	s = s + fmt.Sprintf("vdev_id: %d\n", vdevidx)
+	s = s + fmt.Sprintf("pipe_id: %d\n", pipeid)
+	s = s + fmt.Sprintln("enable: 1")
+	klog.Infoln("s=", s)
+
+	_, err := os.Stat(cacheFileHostDirectory)
+	if os.IsNotExist(err) {
+		err := os.MkdirAll(cacheFileHostDirectory, 0777)
+		if err != nil {
+			return err
+		}
+		err = os.Chmod(cacheFileHostDirectory, 0777)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = os.WriteFile(fmt.Sprintf("%s/%s", cacheFileHostDirectory, cacheFileName), []byte(s), os.ModePerm)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.AllocateRequest) (*kubeletdevicepluginv1beta1.AllocateResponse, error) {
@@ -544,7 +595,7 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 		}
 		//Create vdev file
 		if len(devreq) < 2 && devreq[0].Usedmem < int32(p.totalmem[0]) {
-			filename, err := p.createvdevFile(current, &currentCtr, devreq)
+			filename, err := p.createvdevFiles(current, &currentCtr, devreq)
 			if err != nil {
 				util.PodAllocationFailed(nodename, current, NodeLockDCU)
 				return &responses, err

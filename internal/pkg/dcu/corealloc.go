@@ -19,16 +19,18 @@ package dcu
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 func initCoreUsage(req int) string {
-	res := ""
-	i := 0
-	for i < req/4 {
-		res = res + "0"
-		i++
-	}
-	return res
+	return strings.Repeat("0", 16)
+	//res := ""
+	//i := 0
+	//for i <= req/4 {
+	//	res = res + "0"
+	//	i++
+	//}
+	//return res
 }
 
 func addCoreUsage(tot string, c string) (string, error) {
@@ -68,26 +70,29 @@ func byteAlloc(b int, req int) (int, int) {
 			remains--
 			res = res + 1
 		}
+		if remains <= 0 {
+			break
+		}
 		i++
 	}
 	return res, remains
 }
 
-func allocCoreUsage(tot string, req int) (string, error) {
-	i := 0
+func allocCoreUsage(tot string, req int) (string, int, error) {
+	i := len(tot) - 1
 	res := ""
 	remains := req
 	for {
 		left := int64(0)
 		alloc := 0
-		if i < len(tot) && tot[i] != 0 {
+		if i >= 0 {
 			left, _ = strconv.ParseInt(string(tot[i]), 16, 0)
 			alloc, remains = byteAlloc(int(left), remains)
-			res = fmt.Sprintf("%s%x", res, alloc)
+			res = fmt.Sprintf("%x%s", alloc, res)
 		} else {
 			break
 		}
-		i++
+		i--
 	}
-	return res, nil
+	return res, remains, nil
 }
