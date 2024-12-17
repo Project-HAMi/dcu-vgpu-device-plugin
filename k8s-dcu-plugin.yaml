@@ -21,7 +21,7 @@ spec:
       - key: CriticalAddonsOnly
         operator: Exists
       containers:
-      - image: swr.cn-central-221.ovaijisuan.com/hami/dcu-vgpu-device-plugin:master
+      - image: projecthami/dcu-vgpu-device-plugin:master
         #command: ["/bin/bash","-c","source /opt/hygondriver/env.sh && sleep infinity"]
         command: [ "/root/k8s-device-plugin" ]
         name: dcu-dp-cntr
