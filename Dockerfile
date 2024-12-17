@@ -20,7 +20,7 @@ RUN cd /device-plugin && go build -o ./k8s-device-plugin cmd/k8s-device-plugin/m
 FROM ubuntu:20.04
 ENV TZ=Asia/Dubai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN apt-get update && apt-get -y install libhwloc-dev libdrm-dev pciutils
+RUN apt-get update && apt-get -y install libhwloc-dev libdrm-dev pciutils libelf-dev kmod
 ENV LD_LIBRARY_PATH=/opt/hygondriver/hip/lib:/opt/hygondriver/llvm/lib:/opt/hygondriver/lib:/opt/hygondriver/lib64:/opt/hyhal/lib:/opt/hyhal/lib64:/opt/hygondriver/.hyhal/lib:/opt/hygondriver/.hyhal/lib64:
 ENV PATH=/opt/hygondriver/bin:/opt/hygondriver/llvm/bin:/opt/hygondriver/hip/bin:/opt/hygondriver/hip/bin/hipify:/opt/hyhal/bin:/opt/hygondriver/.hyhal/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV C_INCLUDE_PATH=/opt/hygondriver/include:/opt/hyhal/include:/opt/hygondriver/llvm/include:/opt/hygondriver/.hyhal/include:

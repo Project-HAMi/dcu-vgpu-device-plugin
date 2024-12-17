@@ -95,7 +95,7 @@ func (p *Plugin) Start() error {
 	}
 	p.count = 0
 
-	cmd := exec.Command("hy-smi", "--showmeminfo", "vram")
+	cmd := exec.Command("/opt/hyhal/bin/hy-smi", "--showmeminfo", "vram")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
@@ -124,7 +124,7 @@ func (p *Plugin) Start() error {
 		p.count++
 	}
 
-	cmd = exec.Command("hy-smi", "--showproductname")
+	cmd = exec.Command("/opt/hyhal/bin/hy-smi", "--showproductname")
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
@@ -148,7 +148,7 @@ func (p *Plugin) Start() error {
 		index++
 	}
 
-	cmd = exec.Command("hy-smi", "--showbus")
+	cmd = exec.Command("/opt/hyhal/bin/hy-smi", "--showbus")
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
@@ -167,7 +167,7 @@ func (p *Plugin) Start() error {
 	}
 	fmt.Println("collecting pcibus=", p.pcibusid)
 
-	cmd = exec.Command("hy-virtual", "--show-device-info")
+	cmd = exec.Command("/opt/hyhal/bin/hy-virtual", "--show-device-info")
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
