@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -35,6 +34,7 @@ import (
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util"
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util/client"
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util/nodelock"
+	"github.com/Project-HAMi/dcu-dcgm/pkg/dcgm"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,16 +48,13 @@ const (
 
 // Plugin is identical to DevicePluginServer interface of device plugin API.
 type Plugin struct {
-	AMDGPUs    map[string]map[string]int
-	pcibusid   []string
-	totalcores []int
-	totalmem   []int
-	Heartbeat  chan bool
-	vidx       []bool
-	pipeid     [][]bool
-	coremask   [][]string
-	cardtype   []string
-	count      int
+	AMDGPUs   map[string]map[string]int
+	devices   []dcgm.DeviceInfo
+	Heartbeat chan bool
+	vidx      []bool
+	pipeid    [][]bool
+	coremask  [][]string
+	count     int
 }
 
 // Start is an optional interface that could be implemented by plugin.
@@ -66,8 +63,7 @@ type Plugin struct {
 // method could be used to prepare resources before they are offered
 // to Kubernetes.
 func (p *Plugin) Start() error {
-	p.pcibusid = make([]string, 16)
-	p.totalcores = make([]int, 16)
+	var err error
 	p.vidx = make([]bool, 200)
 	for idx := range p.vidx {
 		p.vidx[idx] = false
@@ -79,14 +75,6 @@ func (p *Plugin) Start() error {
 			p.pipeid[idx][id] = false
 		}
 	}
-	p.totalmem = make([]int, 16)
-	for idx := range p.totalmem {
-		p.totalmem[idx] = 0
-	}
-	p.cardtype = make([]string, 16)
-	for idx := range p.cardtype {
-		p.cardtype[idx] = ""
-	}
 	p.coremask = make([][]string, 16)
 	for idx := range p.coremask {
 		p.coremask[idx] = make([]string, 2)
@@ -94,105 +82,19 @@ func (p *Plugin) Start() error {
 		p.coremask[idx][1] = ""
 	}
 	p.count = 0
-
-	cmd := exec.Command("/opt/hyhal/bin/hy-smi", "--showmeminfo", "vram")
-	out, err := cmd.CombinedOutput()
+	dcgm.Init()
+	p.devices, err = dcgm.DeviceInfos()
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		log.Fatalf("dcgm DeviceInfos failed:%s", err.Error())
 	}
-	index := 0
-	for _, val := range strings.Split(string(out), "\n") {
-		if !strings.Contains(val, "DCU[") {
-			continue
-		}
-		var idx int
-		var memory int
-		var used int
-		if index%2 == 0 {
-			_, err := fmt.Sscanf(val, "DCU[%d] 		: vram Total Memory (MiB): %d\n", &idx, &memory)
-			if err != nil {
-				panic(err)
-			}
-			p.totalmem[idx] = memory
-		} else {
-			_, err := fmt.Sscanf(val, "DCU[%d] 		: vram Total Used Memory (MiB): %d\n", &idx, &used)
-			if err != nil {
-				panic(err)
-			}
-		}
-		index++
-		p.count++
+	for idx := range p.devices {
+		p.devices[idx].DevTypeName = fmt.Sprintf("%v-%v", "DCU", p.devices[idx].DevTypeName)
 	}
+	fmt.Println("infos=", p.devices)
 
-	cmd = exec.Command("/opt/hyhal/bin/hy-smi", "--showproductname")
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
-	}
-	for _, val := range strings.Split(string(out), "\n") {
-		if !strings.Contains(val, "DCU[") {
-			continue
-		}
-		var idx int
-		var cardtype string
-		if index%2 == 0 {
-			_, err := fmt.Sscanf(val, "DCU[%d] 		: Card Series:		%s\n", &idx, &cardtype)
-			if err != nil {
-				_, err := fmt.Sscanf(val, "DCU[%d] 		: Card Series:		DCU %s\n", &idx, &cardtype)
-				if err != nil {
-					panic(err)
-				}
-			}
-			p.cardtype[idx] = fmt.Sprintf("%v-%v", "DCU", cardtype)
-		}
-		index++
-	}
-
-	cmd = exec.Command("/opt/hyhal/bin/hy-smi", "--showbus")
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
-	}
-	for _, val := range strings.Split(string(out), "\n") {
-		if !strings.Contains(val, "DCU[") {
-			continue
-		}
-		var idx int
-		var pcibus string
-		_, err := fmt.Sscanf(val, "DCU[%d] 		: PCI Bus: %s\n", &idx, &pcibus)
-		if err != nil {
-			panic(err)
-		}
-		p.pcibusid[idx] = pcibus
-	}
-	fmt.Println("collecting pcibus=", p.pcibusid)
-
-	cmd = exec.Command("/opt/hyhal/bin/hy-virtual", "--show-device-info")
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
-	}
-	var idx int
-	for _, val := range strings.Split(string(out), "\n") {
-		if strings.Contains(val, "Actual Device:") {
-			_, err := fmt.Sscanf(val, "	Actual Device: %d", &idx)
-			if err != nil {
-				panic(err)
-			}
-			continue
-		}
-		if strings.Contains(val, "Compute units:") {
-			_, err := fmt.Sscanf(val, "	Compute units: %d", &p.totalcores[idx])
-			if err != nil {
-				panic(err)
-			}
-			continue
-		}
-	}
-	fmt.Println("collecting pcibus=", p.pcibusid, "cores=", p.totalcores)
-	for idx, val := range p.totalcores {
-		p.coremask[idx][0] = initCoreUsage(val)
-		p.coremask[idx][1] = initCoreUsage(val)
+	for idx, val := range p.devices {
+		p.coremask[idx][0] = initCoreUsage(int(val.ComputeUnit))
+		p.coremask[idx][1] = initCoreUsage(int(val.ComputeUnit))
 	}
 	go p.WatchAndRegister()
 	return nil
@@ -300,9 +202,11 @@ func (p *Plugin) RefreshContainerDevices() error {
 	if err != nil {
 		return err
 	}
-	for idx := range p.coremask {
-		p.coremask[idx][0] = initCoreUsage(p.totalcores[idx])
-		p.coremask[idx][1] = initCoreUsage(p.totalcores[idx])
+	idx := 0
+	for idx < len(p.devices) {
+		p.coremask[idx][0] = initCoreUsage(int(p.devices[idx].ComputeUnit))
+		p.coremask[idx][1] = initCoreUsage(int(p.devices[idx].ComputeUnit))
+		idx++
 	}
 
 	for _, f := range files {
@@ -455,8 +359,8 @@ func (p *Plugin) createvdevFiles(current *corev1.Pod, ctr *corev1.Container, req
 			continue
 		}
 		idx := getIndexFromUUID(val.UUID)
-		pcibusId = p.pcibusid[idx]
-		reqcores = (val.Usedcores * int32(p.totalcores[idx])) / 100
+		pcibusId = p.devices[idx].PciBusNumber
+		reqcores = (val.Usedcores * int32(p.devices[idx].ComputeUnit)) / 100
 		coremsk1, reqtmp, _ = allocCoreUsage(p.coremask[idx][0], int(reqcores))
 		if reqtmp > 0 {
 			coremsk2, _, _ = allocCoreUsage(p.coremask[idx][1], reqtmp)
@@ -594,7 +498,8 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 			car.Devices = append(car.Devices, dev)
 		}
 		//Create vdev file
-		if len(devreq) < 2 && devreq[0].Usedmem < int32(p.totalmem[0]) {
+		klog.Infoln("devreqs=", len(devreq), "usedmem=", devreq[0].Usedmem, ":", p.devices[0].MemoryTotal/1024/1024)
+		if len(devreq) < 2 && devreq[0].Usedmem < int32(p.devices[0].MemoryTotal/1024/1024) {
 			filename, err := p.createvdevFiles(current, &currentCtr, devreq)
 			if err != nil {
 				util.PodAllocationFailed(nodename, current, NodeLockDCU)

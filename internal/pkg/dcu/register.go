@@ -31,16 +31,16 @@ type DevListFunc func() []*kubeletdevicepluginv1beta1.Device
 
 func (r *Plugin) apiDevices() *[]*api.DeviceInfo {
 	res := []*api.DeviceInfo{}
-	for idx, val := range r.totalmem {
-		if val > 0 {
+	for idx, val := range r.devices {
+		if val.MemoryTotal > 0 {
 			res = append(res, &api.DeviceInfo{
 				Index:   idx,
 				Id:      "DCU-" + fmt.Sprint(idx),
 				Count:   4,
-				Devmem:  int32(val),
+				Devmem:  int32(val.MemoryTotal / 1024 / 1024),
 				Devcore: 100,
 				Numa:    0,
-				Type:    r.cardtype[idx],
+				Type:    val.DevTypeName,
 				Health:  true,
 			})
 		}

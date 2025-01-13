@@ -1,0 +1,3 @@
+[submodule "dcu-dcgm"]
+	path = dcu-dcgm
+	url = https://github.com/Project-HAMi/dcu-dcgm.git
