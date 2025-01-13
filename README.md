@@ -17,19 +17,32 @@ The flow of vDCU job is as follows:
 * This plugin targets Kubernetes v1.18+.
 
 ## Deployment
+
+### Prepare
+```bash
+# on the dcu node, create these directory:
+$ mkdir /etc/vdev
 ```
+```bash
+# should change dtk-xx.xx.x to your installed dtk version
+$ cp -r /opt/dtk-xx.xx.x /opt/dtk
+```
+
+```bash
 $ kubectl apply -f k8s-dcu-rbac.yaml
 $ kubectl apply -f k8s-dcu-plugin.yaml
+# replace NODE_NAME with your dcu node name
+$ kubectl label node NODE_NAME dcu=on
 ```
 
 ## Build
-```
+```bash
 docker build .
 ```
 
 ## Examples
 
-```
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -53,13 +66,13 @@ spec:
 
 Inside container, use hy-virtual to validate
 
-```
+```bash
 source /opt/hygondriver/env.sh
 hy-virtual -show-device-info
 ```
 
 There will be output like these:
-```
+```bash
 Device 0:
 	Actual Device: 0
 	Compute units: 9
