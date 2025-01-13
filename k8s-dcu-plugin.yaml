@@ -19,6 +19,8 @@ spec:
       serviceAccountName: dcu-device-plugin
       hostPID: true
       hostNetwork: true
+      nodeSelector:
+        dcu: "on"
       tolerations:
       - key: CriticalAddonsOnly
         operator: Exists
