@@ -36,3 +36,4 @@ helm/**/Chart.lock
 helm/**/requirements.lock
 
 cmd/k8s-device-plugin/k8s-device-plugin
+k8s-device-plugin
