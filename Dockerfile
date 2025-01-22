@@ -13,7 +13,7 @@
 #  limitations under the License.
 FROM golang:1.21-bullseye AS GOBUILD
 ADD . /device-plugin
-ARG GOPROXY=https://goproxy.cn,direct
+# ARG GOPROXY=https://goproxy.cn,direct
 RUN apt-get update && apt-get -y install libhwloc-dev libdrm-dev
 RUN cd /device-plugin && go build -o ./k8s-device-plugin cmd/k8s-device-plugin/main.go
 
