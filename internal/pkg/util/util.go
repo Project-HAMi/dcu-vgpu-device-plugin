@@ -22,6 +22,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -421,4 +423,49 @@ func PodAllocationFailed(nodeName string, pod *corev1.Pod, lockname string) {
 	if err != nil {
 		klog.Errorf("release lock failed:%v", err.Error())
 	}
+}
+
+// ListDcuDrmDevices list all drm devices, and filter it by dcu vendorID
+func ListDcuDrmDevices() ([]string, []string, error) {
+	filenames := make([]string, 0)
+	dcuDrms := make([]string, 0)
+	dcuRenders := make([]string, 0)
+	files, err := os.ReadDir(LocationDri)
+	if err != nil {
+		klog.Errorf("ListDcuDrmDevices list dri directory error: %v", err.Error())
+		return nil, nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(f.Name(), DriPrefixCard) || strings.HasPrefix(f.Name(), DriPrefixRender) {
+			filenames = append(filenames, f.Name())
+		}
+	}
+	// we need the devices order correctly, sort it first
+	sort.Sort(DrmSlice(filenames))
+	for _, f := range filenames {
+		vendorID, err := os.ReadFile(fmt.Sprintf("/sys/class/drm/%s/device/vendor", f))
+		if err != nil {
+			klog.Errorf("ListDcuDrmDevices read vendor file error: %v", err.Error())
+			return nil, nil, err
+		}
+		fixedVendorID := strings.TrimSpace(string(vendorID))
+		if fixedVendorID != HygonVendorID {
+			klog.Infof("ListDcuDrmDevices dri dev %s vendorID %s is not dcu, skip it", f, fixedVendorID)
+			continue
+		}
+		if strings.HasPrefix(f, DriPrefixCard) {
+			dcuDrms = append(dcuDrms, f)
+		}
+		if strings.HasPrefix(f, DriPrefixRender) {
+			dcuRenders = append(dcuRenders, f)
+		}
+	}
+	if len(dcuDrms) != len(dcuRenders) {
+		return nil, nil, fmt.Errorf("ListDcuDrmDevices dcuDrms %v and dcuRenders %v length not equal", dcuDrms, dcuRenders)
+	}
+
+	return dcuDrms, dcuRenders, nil
 }
