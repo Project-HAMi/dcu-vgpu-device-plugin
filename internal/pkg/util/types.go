@@ -42,6 +42,17 @@ const (
 
 	// NodeNameEnvName define env var name for use get node name.
 	NodeNameEnvName = "NODE_NAME"
+
+	//HygonVendorID is the pci vendor id for hygon
+	HygonVendorID = "0x1d94"
+
+	// LocationDri is the location of the dri
+	LocationDri = "/dev/dri"
+
+	//DriPrefixCard is the "card" file name prefix in /dev/dri. eg: /dev/dri/card0
+	DriPrefixCard = "card"
+	//DriPrefixRender is the "render" file name prefix in /dev/dri. eg: /dev/dri/renderD128
+	DriPrefixRender = "renderD"
 )
 
 type DevicePluginConfigs struct {
