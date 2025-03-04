@@ -33,7 +33,7 @@ import (
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/hwloc"
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util"
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util/client"
-	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util/nodelock"
+	hmutil "github.com/Project-HAMi/HAMi/pkg/util"
 	"github.com/Project-HAMi/dcu-dcgm/pkg/dcgm"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -43,7 +43,10 @@ import (
 )
 
 const (
-	NodeLockDCU = "hami.io/dcumutex.lock"
+	// NodeLockDCU should same with hami scheduler hygon device NodeLockDCU
+	// there is a bug with nodelock package utils, the key is hard coded as "hami.io/mutex.lock"
+	// so we can only use this value now.
+	NodeLockDCU = "hami.io/mutex.lock"
 )
 
 // Plugin is identical to DevicePluginServer interface of device plugin API.
@@ -440,11 +443,12 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 	var dev *kubeletdevicepluginv1beta1.DeviceSpec
 	responses := kubeletdevicepluginv1beta1.AllocateResponse{}
 	nodename := util.NodeName
-	current, err := util.GetPendingPod(nodename)
+	current, err := hmutil.GetPendingPod(ctx, nodename)
 	if err != nil {
-		nodelock.ReleaseNodeLock(nodename, NodeLockDCU)
+		//nodelock.ReleaseNodeLock(nodename, NodeLockDCU, current, false)
 		return &kubeletdevicepluginv1beta1.AllocateResponse{}, err
 	}
+	klog.Infof("Allocate for pod %s/%s uid [%s] \n", current.Namespace, current.Name, current.UID)
 	for idx := range reqs.ContainerRequests {
 		currentCtr, devreq, err := util.GetNextDeviceRequest(util.HygonDCUDevice, *current)
 		klog.Infoln("deviceAllocateFromAnnotation=", devreq)
