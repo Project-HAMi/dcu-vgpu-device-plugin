@@ -378,7 +378,7 @@ func (p *Plugin) createvdevFiles(current *corev1.Pod, ctr *corev1.Container, req
 	}
 	dirName := string(current.UID) + "_" + ctr.Name + "_" + fmt.Sprint(devidx) + "_" + fmt.Sprint(pipeid) + "_" + fmt.Sprint(vdevidx) + "_" + fmt.Sprint(coremsk1) + "_" + fmt.Sprint(coremsk2)
 	cacheFileHostDirectory := fmt.Sprintf("/usr/local/vgpu/dcu/%s", dirName)
-	err = createvdevFile(pcibusId, coremsk1, coremsk2, reqcores, mem, 0, vdevidx, pipeid, cacheFileHostDirectory, "vdev0.conf")
+	err = createvdevFile(pcibusId, coremsk1, coremsk2, reqcores, mem, devidx, vdevidx, pipeid, cacheFileHostDirectory, fmt.Sprintf("vdev%d.conf", vdevidx))
 	if err != nil {
 		return "", err
 	}
@@ -445,6 +445,11 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 		nodelock.ReleaseNodeLock(nodename, NodeLockDCU)
 		return &kubeletdevicepluginv1beta1.AllocateResponse{}, err
 	}
+	drmCards, drmRenders, err := util.ListDcuDrmDevices()
+	if err != nil {
+		util.PodAllocationFailed(nodename, current, NodeLockDCU)
+		return &kubeletdevicepluginv1beta1.AllocateResponse{}, err
+	}
 	for idx := range reqs.ContainerRequests {
 		currentCtr, devreq, err := util.GetNextDeviceRequest(util.HygonDCUDevice, *current)
 		klog.Infoln("deviceAllocateFromAnnotation=", devreq)
@@ -479,18 +484,33 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 		car.Devices = append(car.Devices, dev)
 
 		for _, val := range devreq {
-			var id int
+			var devIdx = -1
 			klog.Infof("Allocating device ID: %s", val.UUID)
-			fmt.Sscanf(val.UUID, "DCU-%d", &id)
+			succeedCount, err := fmt.Sscanf(val.UUID, "DCU-%d", &devIdx)
+			if err != nil || succeedCount == 0 || devIdx == -1 {
+				klog.Errorf("Invalid request device uuid: %s", val.UUID)
+				util.PodAllocationFailed(nodename, current, NodeLockDCU)
+				return &kubeletdevicepluginv1beta1.AllocateResponse{}, fmt.Errorf("invalid request device uuid %s", val.UUID)
+			}
 
-			devpath := fmt.Sprintf("/dev/dri/card%d", id)
+			if devIdx > len(drmCards) || devIdx > len(drmRenders) {
+				klog.Errorf("Invalid device index: %d, all devices counts is: %d, all renders count is: %d", devIdx, len(drmCards), len(drmRenders))
+				util.PodAllocationFailed(nodename, current, NodeLockDCU)
+				return &kubeletdevicepluginv1beta1.AllocateResponse{}, fmt.Errorf("can not match dcu dri request %s. cards %d, renders %d", val.UUID, len(drmCards), len(drmRenders))
+			}
+
+			drmCardName := drmCards[devIdx]
+			klog.Infof("All dcu dri card devs: %v, mapped dri: %s", drmCards, drmCardName)
+			devpath := fmt.Sprintf("/dev/dri/%s", drmCardName)
 			dev = new(kubeletdevicepluginv1beta1.DeviceSpec)
 			dev.HostPath = devpath
 			dev.ContainerPath = devpath
 			dev.Permissions = "rw"
 			car.Devices = append(car.Devices, dev)
 
-			devpath = fmt.Sprintf("/dev/dri/renderD%d", (id + 128))
+			drmRenderName := drmRenders[devIdx]
+			klog.Infof("All dcu dri render devs: %v, mapped dri: %s", drmRenders, drmRenderName)
+			devpath = fmt.Sprintf("/dev/dri/%s", drmRenderName)
 			dev = new(kubeletdevicepluginv1beta1.DeviceSpec)
 			dev.HostPath = devpath
 			dev.ContainerPath = devpath
