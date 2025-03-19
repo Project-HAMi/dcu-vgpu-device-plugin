@@ -30,7 +30,7 @@ import (
 
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/api"
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util/client"
-	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util/nodelock"
+	"github.com/Project-HAMi/HAMi/pkg/util/nodelock"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -406,7 +406,7 @@ func PodAllocationSuccess(nodeName string, pod *corev1.Pod, lockname string) {
 	if err != nil {
 		klog.Errorf("patchPodAnnotations failed:%v", err.Error())
 	}
-	err = nodelock.ReleaseNodeLock(nodeName, lockname)
+	err = nodelock.ReleaseNodeLock(nodeName, lockname, pod, false)
 	if err != nil {
 		klog.Errorf("release lock failed:%v", err.Error())
 	}
@@ -419,7 +419,7 @@ func PodAllocationFailed(nodeName string, pod *corev1.Pod, lockname string) {
 	if err != nil {
 		klog.Errorf("patchPodAnnotations failed:%v", err.Error())
 	}
-	err = nodelock.ReleaseNodeLock(nodeName, lockname)
+	err = nodelock.ReleaseNodeLock(nodeName, lockname, pod, false)
 	if err != nil {
 		klog.Errorf("release lock failed:%v", err.Error())
 	}
