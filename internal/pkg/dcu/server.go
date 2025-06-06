@@ -538,16 +538,16 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 					ContainerPath: "/opt/hygondriver",
 					HostPath:      os.Getenv("HYGONPATH"),
 					ReadOnly:      false,
-				}, &kubeletdevicepluginv1beta1.Mount{
-					ContainerPath: "/opt/hyhal",
-					HostPath:      "/opt/hyhal",
-					ReadOnly:      false,
 				})
-				car.Mounts = append(car.Mounts)
 			}
 		}
 		responses.ContainerResponses = append(responses.ContainerResponses, &car)
 	}
+	car.Mounts = append(car.Mounts, &kubeletdevicepluginv1beta1.Mount{
+		ContainerPath: "/opt/hyhal",
+		HostPath:      "/opt/hyhal",
+		ReadOnly:      true,
+	})
 	klog.Infoln("response=", responses)
 	util.PodAllocationTrySuccess(nodename, util.HygonDCUDevice, NodeLockDCU, current)
 	return &responses, nil
