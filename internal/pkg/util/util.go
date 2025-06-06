@@ -55,6 +55,8 @@ const (
 	DCUUseUUID = "hygon.com/use-gpuuuid"
 	// DCUNoUseUUID is user can not use specify DCU device for set DCU UUID.
 	DCUNoUseUUID = "hygon.com/nouse-gpuuuid"
+
+	mode = "hami"
 )
 
 var (
@@ -140,7 +142,9 @@ func DecodeNodeDevices(str string) ([]*api.DeviceInfo, error) {
 func EncodeNodeDevices(dlist []*api.DeviceInfo) string {
 	tmp := ""
 	for _, val := range dlist {
-		tmp += val.Id + "," + strconv.FormatInt(int64(val.Count), 10) + "," + strconv.Itoa(int(val.Devmem)) + "," + strconv.Itoa(int(val.Devcore)) + "," + val.Type + "," + strconv.Itoa(val.Numa) + "," + strconv.FormatBool(val.Health) + OneContainerMultiDeviceSplitSymbol
+		tmp += val.Id + "," + strconv.FormatInt(int64(val.Count), 10) + "," + strconv.Itoa(int(val.Devmem)) + "," +
+			strconv.Itoa(int(val.Devcore)) + "," + val.Type + "," + strconv.Itoa(val.Numa) + "," +
+			strconv.FormatBool(val.Health) + "," + strconv.Itoa(val.Index) + "," + mode + OneContainerMultiDeviceSplitSymbol
 	}
 	klog.Infof("Encoded node Devices: %s", tmp)
 	return tmp
