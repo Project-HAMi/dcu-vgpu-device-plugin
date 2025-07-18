@@ -31,6 +31,7 @@ import (
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/api"
 	"github.com/HAMi/dcu-vgpu-device-plugin/internal/pkg/util/client"
 	"github.com/Project-HAMi/HAMi/pkg/util/nodelock"
+	"github.com/Project-HAMi/dcu-dcgm/pkg/dcgm"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -472,4 +473,28 @@ func ListDcuDrmDevices() ([]string, []string, error) {
 	}
 
 	return dcuDrms, dcuRenders, nil
+}
+
+func GetDeviceSerialInfos(deviceInfos []dcgm.DeviceInfo) ([]dcgm.DeviceSerialInfo, error) {
+	dvIdList := make([]int, len(deviceInfos))
+
+	for i, info := range deviceInfos {
+		dvIdList[i] = info.DvInd
+	}
+
+	return dcgm.ShowSerialNumber(dvIdList)
+}
+
+func GetSerialNumberToDvIdMap(deviceInfos []dcgm.DeviceInfo) (map[string]int, error) {
+	deviceSerialInfos, err := GetDeviceSerialInfos(deviceInfos)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device serial numbers: %w", err)
+	}
+
+	serialNumberToDvId := make(map[string]int)
+	for _, info := range deviceSerialInfos {
+		serialNumberToDvId[info.SerialNumber] = info.DeviceID
+	}
+
+	return serialNumberToDvId, nil
 }

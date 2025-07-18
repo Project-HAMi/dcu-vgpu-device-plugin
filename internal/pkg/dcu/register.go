@@ -29,13 +29,21 @@ import (
 
 type DevListFunc func() []*kubeletdevicepluginv1beta1.Device
 
-func (r *Plugin) apiDevices() *[]*api.DeviceInfo {
+func (r *Plugin) apiDevices() (*[]*api.DeviceInfo, error) {
 	res := []*api.DeviceInfo{}
+
+	klog.Infof("Getting device serial numbers")
+	deviceSerialInfos, err := util.GetDeviceSerialInfos(r.devices)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device serial numbers: %w", err)
+	}
+	klog.Infof("Device serial numbers retrieved: %v", deviceSerialInfos)
+
 	for idx, val := range r.devices {
 		if val.MemoryTotal > 0 {
 			res = append(res, &api.DeviceInfo{
-				Index:   idx,
-				Id:      "DCU-" + fmt.Sprint(idx),
+				Index:   val.DvInd,
+				Id:      "DCU-" + fmt.Sprint(deviceSerialInfos[idx].SerialNumber),
 				Count:   4,
 				Devmem:  int32(val.MemoryTotal / 1024 / 1024),
 				Devcore: 100,
@@ -45,11 +53,15 @@ func (r *Plugin) apiDevices() *[]*api.DeviceInfo {
 			})
 		}
 	}
-	return &res
+	return &res, nil
 }
 
 func (r *Plugin) RegistrInAnnotation() error {
-	devices := r.apiDevices()
+	devices, err := r.apiDevices()
+	if err != nil {
+		return fmt.Errorf("failed to get devices: %w", err)
+	}
+
 	annos := make(map[string]string)
 	if len(util.NodeName) == 0 {
 		util.NodeName = os.Getenv(util.NodeNameEnvName)
