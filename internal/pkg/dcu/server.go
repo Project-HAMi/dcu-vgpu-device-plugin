@@ -317,7 +317,12 @@ func (p *Plugin) ListAndWatch(e *kubeletdevicepluginv1beta1.Empty, s kubeletdevi
 		}
 	}()
 
-	fakedevs := p.apiDevices()
+	fakedevs, err := p.apiDevices()
+	if err != nil {
+		glog.Errorf("failed to get api devices: %v", err)
+		return fmt.Errorf("failed to get api devices: %w", err)
+	}
+
 	s.Send(&kubeletdevicepluginv1beta1.ListAndWatchResponse{Devices: p.generateFakeDevs(fakedevs)})
 
 	for {
@@ -454,6 +459,12 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 		util.PodAllocationFailed(nodename, current, NodeLockDCU)
 		return &kubeletdevicepluginv1beta1.AllocateResponse{}, err
 	}
+
+	devSerialNumber2IdxMapper, err := util.GetSerialNumberToDvIdMap(p.devices)
+	if err != nil {
+		return &kubeletdevicepluginv1beta1.AllocateResponse{}, fmt.Errorf("failed to get serial number to dvId map: %w", err)
+	}
+
 	for idx := range reqs.ContainerRequests {
 		currentCtr, devreq, err := util.GetNextDeviceRequest(util.HygonDCUDevice, *current)
 		klog.Infoln("deviceAllocateFromAnnotation=", devreq)
@@ -488,13 +499,20 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 		car.Devices = append(car.Devices, dev)
 
 		for _, val := range devreq {
-			var devIdx = -1
-			klog.Infof("Allocating device ID: %s", val.UUID)
-			succeedCount, err := fmt.Sscanf(val.UUID, "DCU-%d", &devIdx)
-			if err != nil || succeedCount == 0 || devIdx == -1 {
+			var devSerialNumber = ""
+			klog.Infof("Allocating device Serial Number: %s", val.UUID)
+			succeedCount, err := fmt.Sscanf(val.UUID, "DCU-%s", &devSerialNumber)
+			if err != nil || succeedCount == 0 || devSerialNumber == "" {
 				klog.Errorf("Invalid request device uuid: %s", val.UUID)
 				util.PodAllocationFailed(nodename, current, NodeLockDCU)
 				return &kubeletdevicepluginv1beta1.AllocateResponse{}, fmt.Errorf("invalid request device uuid %s", val.UUID)
+			}
+
+			devIdx, ok := devSerialNumber2IdxMapper[devSerialNumber]
+			if !ok {
+				klog.Errorf("Device serial number %s not found in mapper", devSerialNumber)
+				util.PodAllocationFailed(nodename, current, NodeLockDCU)
+				return &kubeletdevicepluginv1beta1.AllocateResponse{}, fmt.Errorf("device serial number %s not found in mapper", devSerialNumber)
 			}
 
 			if devIdx > len(drmCards) || devIdx > len(drmRenders) {
