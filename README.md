@@ -1,4 +1,6 @@
 # DCU vGPU device plugin for HAMi
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FProject-HAMi%2Fdcu-vgpu-device-plugin.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FProject-HAMi%2Fdcu-vgpu-device-plugin?ref=badge_shield)
+
 
 ## Introduction
 This is a [Kubernetes][k8s] [device plugin][dp] implementation that enables the registration of hygon DCU in a container cluster for compute workload.  With the approrpriate hardware and this plugin deployed in your Kubernetes cluster, you will be able to run jobs that require AMD DCU. It supports DCU-virtualzation by using hy-virtual provided by dtk
@@ -82,3 +84,6 @@ Device 0:
 ## Maintainer
 
 limengxuan@4paradigm.com
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FProject-HAMi%2Fdcu-vgpu-device-plugin.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FProject-HAMi%2Fdcu-vgpu-device-plugin?ref=badge_large)
