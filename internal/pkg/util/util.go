@@ -498,3 +498,11 @@ func GetSerialNumberToDvIdMap(deviceInfos []dcgm.DeviceInfo) (map[string]int, er
 
 	return serialNumberToDvId, nil
 }
+
+func GetDeviceUUIDFromDevSerialNumber(devSerialNumber string) string {
+	return fmt.Sprintf("DCU-%s", devSerialNumber)
+}
+
+func GetDevSerialNumberFromDeviceUUID(uuid string, devSerialNumber *string) (int, error) {
+	return fmt.Sscanf(uuid, "DCU-%s", devSerialNumber)
+}

@@ -43,7 +43,7 @@ func (r *Plugin) apiDevices() (*[]*api.DeviceInfo, error) {
 		if val.MemoryTotal > 0 {
 			res = append(res, &api.DeviceInfo{
 				Index:   val.DvInd,
-				Id:      "DCU-" + fmt.Sprint(deviceSerialInfos[idx].SerialNumber),
+				Id:      util.GetDeviceUUIDFromDevSerialNumber(deviceSerialInfos[idx].SerialNumber),
 				Count:   4,
 				Devmem:  int32(val.MemoryTotal / 1024 / 1024),
 				Devcore: 100,
