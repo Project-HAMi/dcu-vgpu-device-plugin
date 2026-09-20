@@ -1,4 +1,12 @@
 # DCU vGPU device plugin for HAMi
+
+> [!CAUTION]
+> **本仓库已归档，不再更新 / This repository is archived and will no longer be updated.**
+>
+> 后续 device-plugin 将由海光 **HCU** 官方提供，请勿继续依赖本仓库。详见海光开发者文档：[4.1 HAMi](https://developer.sourcefind.cn/document/9169ef18-c10d-11f0-b077-0242ac150003?id=9231c60e-c10f-11f0-b077-0242ac150003&title=4.1+HAMi&version=9169ef18-c10d-11f0-b077-0242ac150003)。
+>
+> Future device-plugin releases will be provided by Hygon **HCU**. See the official documentation: [4.1 HAMi](https://developer.sourcefind.cn/document/9169ef18-c10d-11f0-b077-0242ac150003?id=9231c60e-c10f-11f0-b077-0242ac150003&title=4.1+HAMi&version=9169ef18-c10d-11f0-b077-0242ac150003).
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FProject-HAMi%2Fdcu-vgpu-device-plugin.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FProject-HAMi%2Fdcu-vgpu-device-plugin?ref=badge_shield)
 
 
