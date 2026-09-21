@@ -362,11 +362,25 @@ func (p *Plugin) createvdevFiles(current *corev1.Pod, ctr *corev1.Container, req
 	if len(req) > 1 {
 		return "", nil
 	}
+
+	devSerialNumber2IdxMapper, err := util.GetSerialNumberToDvIdMap(p.devices)
 	for _, val := range req {
 		if len(val.UUID) == 0 {
 			continue
 		}
-		idx := getIndexFromUUID(val.UUID)
+		var devSerialNumber = ""
+		succeedCount, err := util.GetDevSerialNumberFromDeviceUUID(val.UUID, &devSerialNumber)
+		if err != nil || succeedCount == 0 || devSerialNumber == "" {
+			klog.Errorf("Invalid request device uuid: %s", val.UUID)
+			return "", fmt.Errorf("invalid request device uuid %s", val.UUID)
+		}
+
+		idx, ok := devSerialNumber2IdxMapper[devSerialNumber]
+		if !ok {
+			klog.Errorf("Device serial number %s not found in mapper", devSerialNumber)
+			return "", fmt.Errorf("device serial number %s not found in mapper", devSerialNumber)
+		}
+
 		pcibusId = p.devices[idx].PciBusNumber
 		reqcores = (val.Usedcores * int32(p.devices[idx].ComputeUnit)) / 100
 		coremsk1, reqtmp, _ = allocCoreUsage(p.coremask[idx][0], int(reqcores))
@@ -501,7 +515,8 @@ func (p *Plugin) Allocate(ctx context.Context, reqs *kubeletdevicepluginv1beta1.
 		for _, val := range devreq {
 			var devSerialNumber = ""
 			klog.Infof("Allocating device Serial Number: %s", val.UUID)
-			succeedCount, err := fmt.Sscanf(val.UUID, "DCU-%s", &devSerialNumber)
+
+			succeedCount, err := util.GetDevSerialNumberFromDeviceUUID(val.UUID, &devSerialNumber)
 			if err != nil || succeedCount == 0 || devSerialNumber == "" {
 				klog.Errorf("Invalid request device uuid: %s", val.UUID)
 				util.PodAllocationFailed(nodename, current, NodeLockDCU)
